@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+Set-Content -Path "index.html" -Encoding UTF8 -Value @'
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -25,10 +26,8 @@
         }
         .btn:hover { background: #00aacc; }
         .container { display: flex; flex: 1; overflow: hidden; }
-
-        /* Panneau gauche */
         #panneau {
-            width: 280px; background: #16213e;
+            width: 300px; background: #16213e;
             padding: 12px; overflow-y: auto;
             display: flex; flex-direction: column; gap: 10px;
             border-right: 2px solid #00d4ff;
@@ -55,7 +54,7 @@
             font-size: 12px; border: 1px solid transparent;
             transition: all 0.2s; display: flex; align-items: center; gap: 6px;
         }
-        .lieu-item:hover { border-color: #00d4ff; color: #00d4ff; }
+        .lieu-item:hover, .lieu-item.actif { border-color: #00d4ff; color: #00d4ff; }
         .badge { font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: bold; margin-left: auto; }
         .zone-item {
             background: #1a1a2e; padding: 8px 10px;
@@ -63,14 +62,6 @@
             border: 1px solid transparent; transition: all 0.2s;
         }
         .zone-item:hover { border-color: #00d4ff; }
-        .info-box {
-            background: #1a1a2e; border-radius: 10px;
-            padding: 12px; border-left: 4px solid #00d4ff; display: none;
-        }
-        .info-box.actif { display: block; }
-        .info-box h3 { color: #00d4ff; margin-bottom: 5px; font-size: 13px; }
-        .info-box p { color: #ccc; font-size: 12px; line-height: 1.4; }
-        .info-categorie { font-size: 11px; color: #888; margin-bottom: 6px; }
 
         /* Zone carte + stats */
         #contenuPrincipal { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -78,11 +69,14 @@
 
         /* Panneau stats en bas */
         #statsPanel {
-            height: 220px; background: #16213e;
+            height: 240px; background: #16213e;
             border-top: 2px solid #00d4ff;
-            display: flex; gap: 0;
-            overflow: hidden;
+            display: flex; overflow: hidden;
+            transition: all 0.3s;
         }
+
+        /* Stats globales */
+        #statsGlobales { display: flex; width: 100%; }
         .stat-block {
             flex: 1; padding: 12px;
             border-right: 1px solid #0d2137;
@@ -90,66 +84,109 @@
         }
         .stat-block:last-child { border-right: none; }
         .stat-block h3 { color: #00d4ff; font-size: 12px; margin-bottom: 8px; text-align: center; }
-        .stat-block canvas { flex: 1; }
-        .stat-chiffres {
-            display: flex; flex-wrap: wrap; gap: 6px; justify-content: center;
-        }
+        .stat-chiffres { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 8px; }
         .stat-card {
             background: #1a1a2e; border-radius: 8px;
             padding: 8px 12px; text-align: center;
-            border-top: 3px solid #00d4ff; min-width: 70px;
+            border-top: 3px solid #00d4ff; min-width: 65px;
         }
-        .stat-card .valeur { font-size: 20px; font-weight: bold; color: #00d4ff; }
+        .stat-card .valeur { font-size: 18px; font-weight: bold; color: #00d4ff; }
         .stat-card .label { font-size: 10px; color: #888; margin-top: 2px; }
+
+        /* Stats du lieu sélectionné */
+        #statsLieu { display: none; width: 100%; }
+        .lieu-stats-header {
+            padding: 12px 16px;
+            border-right: 1px solid #0d2137;
+            width: 220px; flex-shrink: 0;
+        }
+        .lieu-stats-header h3 { color: #00d4ff; font-size: 14px; margin-bottom: 4px; }
+        .lieu-stats-header p { color: #aaa; font-size: 11px; line-height: 1.5; margin-bottom: 10px; }
+        .kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .kpi {
+            background: #1a1a2e; border-radius: 8px;
+            padding: 8px; text-align: center;
+        }
+        .kpi .val { font-size: 16px; font-weight: bold; }
+        .kpi .lbl { font-size: 9px; color: #888; margin-top: 2px; }
+        .lieu-stats-graphiques {
+            flex: 1; display: flex; padding: 8px; gap: 8px;
+        }
+        .graph-box { flex: 1; display: flex; flex-direction: column; }
+        .graph-box h4 { color: #888; font-size: 10px; text-align: center; margin-bottom: 4px; }
+        .btn-retour {
+            background: transparent; border: 1px solid #00d4ff;
+            color: #00d4ff; padding: 5px 10px;
+            border-radius: 10px; cursor: pointer; font-size: 11px;
+            margin-top: 8px;
+        }
+        .btn-retour:hover { background: #00d4ff; color: #1a1a2e; }
     </style>
 </head>
 <body>
     <nav>
-        <h1> Mon Site Géomatique - Dakar</h1>
+        <h1>🗺️ Mon Site Géomatique - Dakar</h1>
         <div class="nav-buttons">
-            <button class="btn" onclick="changerCarte('rue')"> Carte</button>
-            <button class="btn" onclick="changerCarte('satellite')"> Satellite</button>
+            <button class="btn" onclick="changerCarte('rue')">🗺️ Carte</button>
+            <button class="btn" onclick="changerCarte('satellite')">🛰️ Satellite</button>
         </div>
     </nav>
     <div class="container">
         <div id="panneau">
-            <h2> Exploration de Dakar</h2>
-            <input type="text" id="recherche" placeholder=" Rechercher..." oninput="filtrerLieux()"/>
+            <h2>📍 Exploration de Dakar</h2>
+            <input type="text" id="recherche" placeholder="🔍 Rechercher..." oninput="filtrerLieux()"/>
             <div class="tabs">
-                <div class="tab actif" onclick="afficherOnglet('marqueurs', this)"> Lieux</div>
-                <div class="tab" onclick="afficherOnglet('zones', this)"> Zones</div>
+                <div class="tab actif" onclick="afficherOnglet('marqueurs', this)">📍 Lieux</div>
+                <div class="tab" onclick="afficherOnglet('zones', this)">🔷 Zones</div>
             </div>
             <div id="panneauMarqueurs">
                 <div class="liste-lieux" id="listeLieux"></div>
             </div>
             <div id="panneauZones" style="display:none; flex-direction:column; gap:6px;"></div>
-            <div class="info-box" id="infoBox">
-                <div class="info-categorie" id="infoCat"></div>
-                <h3 id="infoNom"></h3>
-                <p id="infoDesc"></p>
-            </div>
         </div>
 
         <div id="contenuPrincipal">
             <div id="map"></div>
-
-            <!-- Panneau statistiques -->
             <div id="statsPanel">
-                <div class="stat-block">
-                    <h3> Lieux par catégorie</h3>
-                    <canvas id="graphCategories"></canvas>
+                <!-- Stats globales -->
+                <div id="statsGlobales">
+                    <div class="stat-block">
+                        <h3>📊 Lieux par catégorie</h3>
+                        <canvas id="graphCategories"></canvas>
+                    </div>
+                    <div class="stat-block">
+                        <h3>🔷 Superficie des zones (km²)</h3>
+                        <canvas id="graphZones"></canvas>
+                    </div>
+                    <div class="stat-block">
+                        <h3>📈 Chiffres clés</h3>
+                        <div class="stat-chiffres">
+                            <div class="stat-card"><div class="valeur">5</div><div class="label">Lieux</div></div>
+                            <div class="stat-card"><div class="valeur">3</div><div class="label">Zones</div></div>
+                            <div class="stat-card"><div class="valeur" style="color:#ff9f43">550</div><div class="label">km²</div></div>
+                            <div class="stat-card"><div class="valeur" style="color:#55efc4">3,8M</div><div class="label">Habitants</div></div>
+                        </div>
+                        <p style="color:#555;font-size:10px;text-align:center;margin-top:10px">👆 Cliquez sur un marqueur<br>pour voir ses statistiques</p>
+                    </div>
                 </div>
-                <div class="stat-block">
-                    <h3> Superficie des zones (km²)</h3>
-                    <canvas id="graphZones"></canvas>
-                </div>
-                <div class="stat-block">
-                    <h3> Chiffres clés</h3>
-                    <div class="stat-chiffres">
-                        <div class="stat-card"><div class="valeur">5</div><div class="label">Lieux</div></div>
-                        <div class="stat-card"><div class="valeur">3</div><div class="label">Zones</div></div>
-                        <div class="stat-card"><div class="valeur" style="color:#ff9f43">550</div><div class="label">km² ville</div></div>
-                        <div class="stat-card"><div class="valeur" style="color:#55efc4">3,8M</div><div class="label">Habitants</div></div>
+
+                <!-- Stats du lieu sélectionné -->
+                <div id="statsLieu">
+                    <div class="lieu-stats-header">
+                        <h3 id="lieuNom"></h3>
+                        <p id="lieuDesc"></p>
+                        <div class="kpi-grid" id="lieuKpis"></div>
+                        <button class="btn-retour" onclick="afficherStatsGlobales()">← Retour</button>
+                    </div>
+                    <div class="lieu-stats-graphiques">
+                        <div class="graph-box">
+                            <h4 id="graph1Titre"></h4>
+                            <canvas id="graphLieu1"></canvas>
+                        </div>
+                        <div class="graph-box">
+                            <h4 id="graph2Titre"></h4>
+                            <canvas id="graphLieu2"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -159,8 +196,8 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         const map = L.map('map').setView([14.6937, -17.4441], 12);
-        const coucheRue = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: ' OpenStreetMap' });
-        const coucheSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: ' Esri' });
+        const coucheRue = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' });
+        const coucheSatellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: '© Esri' });
         coucheRue.addTo(map);
 
         function changerCarte(type) {
@@ -174,17 +211,97 @@
         };
 
         const lieux = [
-            { nom: "Dakar Centre", lat: 14.6937, lng: -17.4441, desc: "Capitale du Sénégal, centre politique et économique.", categorie: "Ville" },
-            { nom: "Aéroport AIBD", lat: 14.7397, lng: -17.4902, desc: "Aéroport International Blaise Diagne.", categorie: "Transport" },
-            { nom: "Île de Gorée", lat: 14.6675, lng: -17.3990, desc: "Site historique classé UNESCO.", categorie: "Histoire" },
-            { nom: "Monument Renaissance", lat: 14.7247, lng: -17.4933, desc: "Plus grande statue d'Afrique, inaugurée en 2010.", categorie: "Culture" },
-            { nom: "Université UCAD", lat: 14.6921, lng: -17.4679, desc: "Principale université du Sénégal.", categorie: "Éducation" }
+            {
+                nom: "Dakar Centre", lat: 14.6937, lng: -17.4441,
+                desc: "Capitale du Sénégal, centre politique et économique.",
+                categorie: "Ville",
+                kpis: [
+                    { val: "3,8M", lbl: "Habitants", couleur: "#00d4ff" },
+                    { val: "550", lbl: "km²", couleur: "#00d4ff" },
+                    { val: "19°C", lbl: "Temp. moy.", couleur: "#ff9f43" },
+                    { val: "1857", lbl: "Fondée", couleur: "#55efc4" }
+                ],
+                graph1: { titre: "Population par quartier (milliers)", type: "bar",
+                    labels: ["Plateau", "Médina", "Pikine", "Guédiawaye", "Parcelles"],
+                    data: [90, 350, 1200, 450, 280], couleur: "#00d4ff" },
+                graph2: { titre: "Évolution population (millions)", type: "line",
+                    labels: ["1980", "1990", "2000", "2010", "2020", "2024"],
+                    data: [0.9, 1.5, 2.1, 2.9, 3.5, 3.8], couleur: "#ff9f43" }
+            },
+            {
+                nom: "Aéroport AIBD", lat: 14.7397, lng: -17.4902,
+                desc: "Aéroport International Blaise Diagne.",
+                categorie: "Transport",
+                kpis: [
+                    { val: "5M", lbl: "Passagers/an", couleur: "#ff9f43" },
+                    { val: "75", lbl: "Destinations", couleur: "#ff9f43" },
+                    { val: "3,9km", lbl: "Piste", couleur: "#00d4ff" },
+                    { val: "2017", lbl: "Ouverture", couleur: "#55efc4" }
+                ],
+                graph1: { titre: "Passagers par année (millions)", type: "bar",
+                    labels: ["2018", "2019", "2020", "2021", "2022", "2023"],
+                    data: [2.1, 3.2, 1.1, 1.8, 3.5, 5.0], couleur: "#ff9f43" },
+                graph2: { titre: "Répartition des vols (%)", type: "doughnut",
+                    labels: ["Europe", "Afrique", "Amériques", "Asie"],
+                    data: [45, 35, 15, 5], couleur: "#ff9f43" }
+            },
+            {
+                nom: "Île de Gorée", lat: 14.6675, lng: -17.3990,
+                desc: "Site historique classé UNESCO, symbole de la traite négrière.",
+                categorie: "Histoire",
+                kpis: [
+                    { val: "900", lbl: "Habitants", couleur: "#ee5a24" },
+                    { val: "0,18", lbl: "km²", couleur: "#ee5a24" },
+                    { val: "300K", lbl: "Touristes/an", couleur: "#ff9f43" },
+                    { val: "1978", lbl: "UNESCO", couleur: "#55efc4" }
+                ],
+                graph1: { titre: "Touristes par année (milliers)", type: "line",
+                    labels: ["2018", "2019", "2020", "2021", "2022", "2023"],
+                    data: [280, 310, 50, 120, 250, 300], couleur: "#ee5a24" },
+                graph2: { titre: "Origine des visiteurs (%)", type: "doughnut",
+                    labels: ["Sénégal", "France", "USA", "Autres"],
+                    data: [40, 25, 20, 15], couleur: "#ee5a24" }
+            },
+            {
+                nom: "Monument Renaissance", lat: 14.7247, lng: -17.4933,
+                desc: "Plus grande statue d'Afrique, inaugurée en 2010.",
+                categorie: "Culture",
+                kpis: [
+                    { val: "49m", lbl: "Hauteur", couleur: "#a29bfe" },
+                    { val: "2010", lbl: "Inauguration", couleur: "#a29bfe" },
+                    { val: "500K", lbl: "Visiteurs/an", couleur: "#ff9f43" },
+                    { val: "27B", lbl: "FCFA", couleur: "#55efc4" }
+                ],
+                graph1: { titre: "Visiteurs par année (milliers)", type: "bar",
+                    labels: ["2018", "2019", "2020", "2021", "2022", "2023"],
+                    data: [350, 420, 80, 200, 430, 500], couleur: "#a29bfe" },
+                graph2: { titre: "Visiteurs par origine (%)", type: "doughnut",
+                    labels: ["Sénégal", "Diaspora", "Touristes", "Autres"],
+                    data: [50, 20, 25, 5], couleur: "#a29bfe" }
+            },
+            {
+                nom: "Université UCAD", lat: 14.6921, lng: -17.4679,
+                desc: "Université Cheikh Anta Diop, principale université du Sénégal.",
+                categorie: "Éducation",
+                kpis: [
+                    { val: "90K", lbl: "Étudiants", couleur: "#55efc4" },
+                    { val: "14", lbl: "Facultés", couleur: "#55efc4" },
+                    { val: "1957", lbl: "Fondée", couleur: "#ff9f43" },
+                    { val: "3000", lbl: "Enseignants", couleur: "#00d4ff" }
+                ],
+                graph1: { titre: "Étudiants par faculté (milliers)", type: "bar",
+                    labels: ["Droit", "Médecine", "Sciences", "Lettres", "Éco"],
+                    data: [18, 12, 15, 20, 14], couleur: "#55efc4" },
+                graph2: { titre: "Évolution des effectifs (milliers)", type: "line",
+                    labels: ["2000", "2005", "2010", "2015", "2020", "2024"],
+                    data: [30, 45, 60, 72, 82, 90], couleur: "#a29bfe" }
+            }
         ];
 
         const zones = [
-            { nom: "Presqu'île du Cap-Vert", couleur: "#00d4ff", desc: "Zone urbaine principale de Dakar.", superficie: 550,
+            { nom: "Presqu'île du Cap-Vert", couleur: "#00d4ff", desc: "Zone urbaine principale.", superficie: 550,
               coords: [[14.7800,-17.5200],[14.7800,-17.3800],[14.6200,-17.3800],[14.6200,-17.5200]] },
-            { nom: "Zone Portuaire", couleur: "#ff9f43", desc: "Principal port commercial du Sénégal.", superficie: 12,
+            { nom: "Zone Portuaire", couleur: "#ff9f43", desc: "Principal port commercial.", superficie: 12,
               coords: [[14.6850,-17.4400],[14.6950,-17.4400],[14.6950,-17.4200],[14.6850,-17.4200]] },
             { nom: "Zone Aéroportuaire", couleur: "#55efc4", desc: "Aire de l'aéroport international.", superficie: 35,
               coords: [[14.7250,-17.5100],[14.7550,-17.5100],[14.7550,-17.4700],[14.7250,-17.4700]] }
@@ -194,42 +311,144 @@
             const c = couleurs[categorie];
             return L.divIcon({
                 className: '',
-                html: '<div style="background:' + c + ';width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 0 6px rgba(0,0,0,0.5)"></div>',
-                iconSize: [16,16], iconAnchor: [8,8]
+                html: '<div style="background:' + c + ';width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 0 8px rgba(0,0,0,0.6)"></div>',
+                iconSize: [18,18], iconAnchor: [9,9]
             });
         }
 
+        let chartLieu1 = null, chartLieu2 = null;
+
         const listeLieux = document.getElementById('listeLieux');
         const panneauZones = document.getElementById('panneauZones');
-        const infoBox = document.getElementById('infoBox');
+        let itemsListe = [];
 
-        lieux.forEach(lieu => {
+        lieux.forEach((lieu, idx) => {
             const marker = L.marker([lieu.lat, lieu.lng], { icon: creerIcone(lieu.categorie) }).addTo(map);
-            marker.on('click', () => afficherInfo(lieu.nom, lieu.desc, lieu.categorie));
+            marker.on('click', () => {
+                map.setView([lieu.lat, lieu.lng], 14);
+                afficherStatsLieu(lieu, idx);
+            });
+
             const item = document.createElement('div');
             item.className = 'lieu-item';
             item.dataset.nom = lieu.nom.toLowerCase();
             const c = couleurs[lieu.categorie];
             item.innerHTML = '<span style="background:' + c + ';width:10px;height:10px;border-radius:50%;flex-shrink:0;display:inline-block"></span>' + lieu.nom + '<span class="badge" style="background:' + c + '22;color:' + c + '">' + lieu.categorie + '</span>';
-            item.onclick = () => { map.setView([lieu.lat, lieu.lng], 15); afficherInfo(lieu.nom, lieu.desc, lieu.categorie); };
+            item.onclick = () => {
+                map.setView([lieu.lat, lieu.lng], 15);
+                afficherStatsLieu(lieu, idx);
+            };
             listeLieux.appendChild(item);
+            itemsListe.push(item);
         });
 
         zones.forEach(zone => {
             const polygone = L.polygon(zone.coords, { color: zone.couleur, fillColor: zone.couleur, fillOpacity: 0.2, weight: 2 }).addTo(map);
-            polygone.on('click', () => afficherInfo(zone.nom, zone.desc, ' Zone'));
+            polygone.on('click', () => afficherStatsGlobales());
             const item = document.createElement('div');
             item.className = 'zone-item';
-            item.innerHTML = '<span style="color:' + zone.couleur + '"></span> <b>' + zone.nom + '</b><br><span style="color:#888;font-size:11px">' + zone.superficie + ' km²</span>';
-            item.onclick = () => { map.fitBounds(polygone.getBounds()); afficherInfo(zone.nom, zone.desc, ' Zone'); };
+            item.innerHTML = '<span style="color:' + zone.couleur + '">🔷</span> <b>' + zone.nom + '</b><br><span style="color:#888;font-size:11px">' + zone.superficie + ' km²</span>';
+            item.onclick = () => { map.fitBounds(polygone.getBounds()); };
             panneauZones.appendChild(item);
         });
 
-        function afficherInfo(nom, desc, cat) {
-            document.getElementById('infoNom').textContent = nom;
-            document.getElementById('infoDesc').textContent = desc;
-            document.getElementById('infoCat').textContent = cat;
-            infoBox.classList.add('actif');
+        function afficherStatsLieu(lieu, idx) {
+            // Mettre en surbrillance dans la liste
+            itemsListe.forEach(i => i.classList.remove('actif'));
+            itemsListe[idx].classList.add('actif');
+
+            document.getElementById('statsGlobales').style.display = 'none';
+            document.getElementById('statsLieu').style.display = 'flex';
+
+            document.getElementById('lieuNom').textContent = lieu.nom;
+            document.getElementById('lieuDesc').textContent = lieu.desc;
+
+            // KPIs
+            const kpiGrid = document.getElementById('lieuKpis');
+            kpiGrid.innerHTML = '';
+            lieu.kpis.forEach(k => {
+                kpiGrid.innerHTML += '<div class="kpi"><div class="val" style="color:' + k.couleur + '">' + k.val + '</div><div class="lbl">' + k.lbl + '</div></div>';
+            });
+
+            // Graphique 1
+            document.getElementById('graph1Titre').textContent = lieu.graph1.titre;
+            if (chartLieu1) chartLieu1.destroy();
+            const ctx1 = document.getElementById('graphLieu1').getContext('2d');
+
+            if (lieu.graph1.type === 'bar') {
+                chartLieu1 = new Chart(ctx1, {
+                    type: 'bar',
+                    data: {
+                        labels: lieu.graph1.labels,
+                        datasets: [{ data: lieu.graph1.data, backgroundColor: lieu.graph1.couleur, borderRadius: 4, borderWidth: 0 }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { color: '#888', font: { size: 8 } }, grid: { color: '#0d2137' } },
+                            y: { ticks: { color: '#888', font: { size: 8 } }, grid: { color: '#0d2137' } }
+                        }
+                    }
+                });
+            } else {
+                chartLieu1 = new Chart(ctx1, {
+                    type: 'line',
+                    data: {
+                        labels: lieu.graph1.labels,
+                        datasets: [{ data: lieu.graph1.data, borderColor: lieu.graph1.couleur, backgroundColor: lieu.graph1.couleur + '22', tension: 0.4, fill: true, pointRadius: 3 }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { color: '#888', font: { size: 8 } }, grid: { color: '#0d2137' } },
+                            y: { ticks: { color: '#888', font: { size: 8 } }, grid: { color: '#0d2137' } }
+                        }
+                    }
+                });
+            }
+
+            // Graphique 2
+            document.getElementById('graph2Titre').textContent = lieu.graph2.titre;
+            if (chartLieu2) chartLieu2.destroy();
+            const ctx2 = document.getElementById('graphLieu2').getContext('2d');
+
+            if (lieu.graph2.type === 'doughnut') {
+                chartLieu2 = new Chart(ctx2, {
+                    type: 'doughnut',
+                    data: {
+                        labels: lieu.graph2.labels,
+                        datasets: [{ data: lieu.graph2.data, backgroundColor: ['#00d4ff','#ff9f43','#ee5a24','#a29bfe'], borderWidth: 0 }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { position: 'right', labels: { color: 'white', font: { size: 9 }, boxWidth: 10 } } }
+                    }
+                });
+            } else {
+                chartLieu2 = new Chart(ctx2, {
+                    type: 'line',
+                    data: {
+                        labels: lieu.graph2.labels,
+                        datasets: [{ data: lieu.graph2.data, borderColor: lieu.graph2.couleur, backgroundColor: lieu.graph2.couleur + '22', tension: 0.4, fill: true, pointRadius: 3 }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { color: '#888', font: { size: 8 } }, grid: { color: '#0d2137' } },
+                            y: { ticks: { color: '#888', font: { size: 8 } }, grid: { color: '#0d2137' } }
+                        }
+                    }
+                });
+            }
+        }
+
+        function afficherStatsGlobales() {
+            itemsListe.forEach(i => i.classList.remove('actif'));
+            document.getElementById('statsGlobales').style.display = 'flex';
+            document.getElementById('statsLieu').style.display = 'none';
         }
 
         function filtrerLieux() {
@@ -246,36 +465,24 @@
             document.getElementById('panneauZones').style.display = onglet === 'zones' ? 'flex' : 'none';
         }
 
-        // --- Graphique 1 : Lieux par catégorie ---
+        // Graphiques globaux
         new Chart(document.getElementById('graphCategories'), {
             type: 'doughnut',
             data: {
                 labels: Object.keys(couleurs),
-                datasets: [{
-                    data: [1, 1, 1, 1, 1],
-                    backgroundColor: Object.values(couleurs),
-                    borderWidth: 0
-                }]
+                datasets: [{ data: [1,1,1,1,1], backgroundColor: Object.values(couleurs), borderWidth: 0 }]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'right', labels: { color: 'white', font: { size: 10 }, boxWidth: 12 } }
-                }
+                plugins: { legend: { position: 'right', labels: { color: 'white', font: { size: 10 }, boxWidth: 12 } } }
             }
         });
 
-        // --- Graphique 2 : Superficie des zones ---
         new Chart(document.getElementById('graphZones'), {
             type: 'bar',
             data: {
-                labels: zones.map(z => z.nom.substring(0, 15) + '...'),
-                datasets: [{
-                    label: 'km²',
-                    data: zones.map(z => z.superficie),
-                    backgroundColor: zones.map(z => z.couleur),
-                    borderRadius: 6, borderWidth: 0
-                }]
+                labels: zones.map(z => z.nom.substring(0,12) + '...'),
+                datasets: [{ data: zones.map(z => z.superficie), backgroundColor: zones.map(z => z.couleur), borderRadius: 6, borderWidth: 0 }]
             },
             options: {
                 responsive: true, maintainAspectRatio: false,
@@ -289,3 +496,4 @@
     </script>
 </body>
 </html>
+'@
